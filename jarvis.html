@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JARVIS - स्टेप 3</title>
+<style>
+:root{color-scheme:dark;--bg:#05060d;--ink:#e8ecff;--dim:#8a90b8;--blue:#2ee6ff;--purple:#9b5cff;--line:#1c2040;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Devanagari",sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px 16px 24px}
+#logo{width:130px;height:130px;margin-top:4px}
+#status{margin:10px 0 0;font-size:20px;font-weight:600;min-height:28px}
+#sub{margin:2px 0 0;color:var(--dim);font-size:14px}
+#orbwrap{width:min(78vw,340px);aspect-ratio:1;margin:14px 0}
+canvas{width:100%;height:100%;display:block}
+#btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:380px}
+button{font:inherit;font-size:17px;font-weight:600;color:var(--ink);background:#0d1030;border:1.5px solid var(--line);border-radius:14px;padding:16px 8px;min-height:56px}
+button:active{transform:scale(.97)}
+button.on{border-color:var(--blue);box-shadow:0 0 14px rgba(46,230,255,.45)}
+#btns .wide{grid-column:1/3}
+/* आँखों का एनिमेशन */
+.eye{transform-box:fill-box;transform-origin:center;fill:var(--blue);filter:drop-shadow(0 0 5px #2ee6ff)}
+#logo.listen .eye{animation:pulse 1.2s ease-in-out infinite}
+#logo.think #eyes{animation:scan 1.6s ease-in-out infinite}
+#logo.speak .eye{animation:talk .45s ease-in-out infinite alternate}
+#logo.sleep .eye{transform:scaleY(.12);opacity:.5}
+#logo.off .eye{fill:#2a2f50;filter:none;opacity:.7}
+@keyframes pulse{50%{transform:scale(1.25);opacity:.8}}
+@keyframes scan{0%,100%{transform:translateX(-5px)}50%{transform:translateX(5px)}}
+@keyframes talk{from{transform:scaleY(.55)}to{transform:scaleY(1.15)}}
+@media (prefers-reduced-motion:reduce){.eye,#eyes{animation:none!important}}
+</style>
+</head>
+<body>
+
+<svg id="logo" class="listen" viewBox="0 0 200 200" role="img" aria-label="JARVIS रोबोट लोगो">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e9edf5"/><stop offset=".45" stop-color="#8d96a8"/><stop offset="1" stop-color="#3a4052"/>
+    </linearGradient>
+    <radialGradient id="face" cx=".5" cy=".4" r=".7">
+      <stop offset="0" stop-color="#1a1d2c"/><stop offset="1" stop-color="#05060a"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#metal)"/>
+  <circle cx="100" cy="100" r="86" fill="#07080f"/>
+  <circle cx="100" cy="100" r="82" fill="none" stroke="#2ee6ff" stroke-opacity=".35" stroke-width="1.5"/>
+  <path d="M52 62 Q100 36 148 62 L156 112 Q150 150 100 160 Q50 150 44 112 Z" fill="url(#face)" stroke="url(#metal)" stroke-width="4"/>
+  <g id="eyes">
+    <ellipse class="eye" cx="76" cy="95" rx="15" ry="8"/>
+    <ellipse class="eye" cx="124" cy="95" rx="15" ry="8"/>
+  </g>
+  <rect x="70" y="122" width="60" height="4" rx="2" fill="#8d96a8" opacity=".6"/>
+  <text x="100" y="146" text-anchor="middle" font-size="15" font-weight="700" letter-spacing="3" fill="#e9edf5" font-family="system-ui,sans-serif">JARVIS</text>
+</svg>
+
+<p id="status">सुन रहा हूँ…</p>
+<p id="sub">माइक: <b id="mic-state">बंद</b></p>
+<p id="heard" style="margin:4px 0 0;font-size:14px;color:var(--blue);min-height:20px;text-align:center"></p>
+
+<div id="orbwrap"><canvas id="orb"></canvas></div>
+
+<div id="btns">
+  <button id="mic" class="wide">🎤 माइक चालू करें</button>
+  <button id="vtest" class="wide">🔊 आवाज़ टेस्ट करें</button>
+  <button data-s="listen" class="on">सुन रहा है</button>
+  <button data-s="think">सोच रहा है</button>
+  <button data-s="speak">बोल रहा है</button>
+  <button data-s="sleep">सो रहा है</button>
+  <button data-s="off" class="wide">पूरी तरह बंद</button>
+</div>
+
+<script>
+(function(){
+  var TEXT={listen:"सुन रहा हूँ…",think:"सोच रहा हूँ…",speak:"बोल रहा हूँ…",sleep:"सो रहा हूँ (Sleep)",off:"पूरी तरह बंद (Shutdown)"};
+  var CFG={ // speed, wave, brightness, hueShift
+    listen:{sp:1,wave:1,br:1},
+    think:{sp:3,wave:.5,br:1},
+    speak:{sp:1.6,wave:0,br:1},
+    sleep:{sp:.25,wave:.15,br:.4},
+    off:{sp:0,wave:0,br:.12}
+  };
+  var state="listen",t=0,hue=0,amp=0;
+  var cv=document.getElementById("orb"),cx=cv.getContext("2d");
+  var logo=document.getElementById("logo"),status=document.getElementById("status");
+  var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var cur={sp:1,wave:1,br:1};
+
+  function size(){
+    var r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);
+    cv.width=r.width*d;cv.height=r.height*d;
+  }
+  window.addEventListener("resize",size);size();
+
+  function setState(s){
+    state=s;
+    logo.setAttribute("class",s);
+    status.textContent=TEXT[s];
+    var b=document.querySelectorAll("#btns button");
+    for(var i=0;i<b.length;i++){b[i].classList.toggle("on",b[i].getAttribute("data-s")===s);}
+  }
+  document.getElementById("btns").addEventListener("click",function(e){
+    var s=e.target.getAttribute&&e.target.getAttribute("data-s");
+    if(s)setState(s);
+  });
+
+  function frame(){
+    var c=CFG[state];
+    cur.sp+=(c.sp-cur.sp)*.06;cur.wave+=(c.wave-cur.wave)*.06;cur.br+=(c.br-cur.br)*.06;
+    if(!reduce){t+=.016*cur.sp;}
+    if(state==="think")hue+=.8;
+    // बोलते समय आवाज जैसा उतार-चढ़ाव (नकली; असली आवाज बाद के स्टेप में जुड़ेगी)
+    var target=state==="speak"?(.5+.5*Math.abs(Math.sin(t*5)*Math.cos(t*2.3))):0;
+    amp+=(target-amp)*.2;
+
+    var W=cv.width,H=cv.height,R=W*.5,cxm=W/2,cym=H/2;
+    cx.clearRect(0,0,W,H);
+    var base=R*.52,pulse=base*(1+amp*.18);
+    cx.globalAlpha=cur.br;
+
+    // बाहर की चमक
+    var g=cx.createRadialGradient(cxm,cym,pulse*.5,cxm,cym,R);
+    g.addColorStop(0,"hsla("+(215+hue)+",100%,60%,.35)");
+    g.addColorStop(1,"rgba(5,6,13,0)");
+    cx.fillStyle=g;cx.fillRect(0,0,W,H);
+
+    // बहते रंग के गोले
+    cx.save();cx.beginPath();cx.arc(cxm,cym,pulse,0,Math.PI*2);cx.clip();
+    cx.fillStyle="#0a0c24";cx.fillRect(0,0,W,H);
+    var cols=[[215,100,58],[268,95,64],[200,100,92]];
+    for(var i=0;i<3;i++){
+      var a=t*(1+i*.4)+i*2.1;
+      var x=cxm+Math.cos(a)*pulse*.45,y=cym+Math.sin(a*1.2)*pulse*.45;
+      var h=(cols[i][0]+hue)%360;
+      var rg=cx.createRadialGradient(x,y,0,x,y,pulse*.95);
+      rg.addColorStop(0,"hsla("+h+","+cols[i][1]+"%,"+cols[i][2]+"%,.95)");
+      rg.addColorStop(1,"hsla("+h+","+cols[i][1]+"%,"+cols[i][2]+"%,0)");
+      cx.fillStyle=rg;cx.fillRect(0,0,W,H);
+    }
+    // सुनते समय लहरें
+    var w=cur.wave;
+    if(w>.02){
+      cx.lineWidth=Math.max(1.5,W*.006);
+      for(var k=0;k<3;k++){
+        cx.beginPath();
+        cx.strokeStyle="rgba(255,255,255,"+(.5-k*.14)*Math.min(w,1)+")";
+        for(var px=0;px<=W;px+=6){
+          var yy=cym+Math.sin(px/W*7+t*4+k*1.3)*pulse*.16*w*(1-k*.25);
+          if(px===0)cx.moveTo(px,yy);else cx.lineTo(px,yy);
+        }
+        cx.stroke();
+      }
+    }
+    cx.restore();
+
+    // किनारे की रिंग
+    cx.strokeStyle="hsla("+(210+hue)+",100%,75%,.7)";
+    cx.lineWidth=Math.max(2,W*.008);
+    cx.beginPath();cx.arc(cxm,cym,pulse,0,Math.PI*2);cx.stroke();
+    cx.globalAlpha=1;
+
+    requestAnimationFrame(frame);
+  }
+
+  // ===== स्टेप 2: आवाज़ से कंट्रोल =====
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var micBtn=document.getElementById("mic"),micState=document.getElementById("mic-state"),heard=document.getElementById("heard");
+  var rec=null,want=false,mode="stopped",talking=false; // mode: wait, active, sleep, stopped
+  var J="(jarvis|jarwis|jarvish|service|जार्विस|जारविस|जर्विस|जार्विज|जरविस|जार्विश)";
+  var R={
+    wake:new RegExp("(hi|hey|hai|hay|हाय|हाई|हे|है)\\s*"+J,"i"),
+    sleep:/(so\s*jao|sojao|सो\s*जाओ|सो\s*जा)/i,
+    resume:/(phir\s*se\s*suno|फिर\s*से\s*सुन|dobara|दोबारा|दुबारा)/i,
+    stop:/(band\s*ho|बंद\s*हो|बन्द\s*हो)/i,
+    shutdown:/(full\s*shutdown|फुल\s*शटडाउन|फुल\s*शट\s*डाउन|shut\s*down|शटडाउन)/i,
+    time:/(time|samay|समय|टाइम|कितने\s*बजे|kitne\s*baje)/i,
+    date:/(date|tarikh|तारीख|तारिख|आज\s*कौन|kaun\s*sa\s*din)/i
+  };
+  function say(txt,after){
+    if(!window.speechSynthesis){heard.textContent=txt;return;}
+    talking=true;setState("speak");heard.textContent="Jarvis: "+txt;
+    var u=new SpeechSynthesisUtterance(txt);
+    var v=pickVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang="hi-IN";
+    var fin=false;
+    function done(){if(fin)return;fin=true;talking=false;if(after)after();else setState(mode==="sleep"?"sleep":(mode==="stopped"?"off":"listen"));}
+    u.onend=done;
+    u.onerror=function(e){heard.textContent="आवाज़ की गड़बड़ी: "+(e&&e.error?e.error:"अज्ञात")+" | "+txt;done();};
+    setTimeout(function(){if(talking&&!speechSynthesis.speaking&&!fin){heard.textContent="फोन ने आवाज़ नहीं बजाई (मीडिया वॉल्यूम या Text-to-speech जाँचें)। | "+txt;done();}},2500);
+    speechSynthesis.cancel();setTimeout(function(){speechSynthesis.speak(u);},80);
+  }
+  function pickVoice(){
+    var vs=speechSynthesis.getVoices()||[],i;
+    for(i=0;i<vs.length;i++)if(/^hi/i.test(vs[i].lang))return vs[i];
+    for(i=0;i<vs.length;i++)if(/^en-IN/i.test(vs[i].lang))return vs[i];
+    return vs[0]||null;
+  }
+  if(window.speechSynthesis){speechSynthesis.onvoiceschanged=function(){};speechSynthesis.getVoices();}
+  function setMic(on){micState.textContent=on?"चालू":"बंद";micState.style.color=on?"#2ee6ff":"#8a90b8";micBtn.textContent=on?"🎤 माइक बंद करें":"🎤 माइक चालू करें";}
+  function startRec(){
+    if(!SR){heard.textContent="यह ब्राउज़र आवाज़ पहचान नहीं करता। Android के Chrome में खोलें।";return;}
+    want=true;
+    rec=new SR();rec.lang="hi-IN";rec.continuous=true;rec.interimResults=false;
+    rec.onresult=function(e){
+      var txt=e.results[e.results.length-1][0].transcript.trim();
+      if(!talking)handle(txt);
+    };
+    rec.onerror=function(e){
+      if(e.error==="not-allowed"||e.error==="service-not-allowed"){want=false;mode="stopped";setMic(false);setState("off");heard.textContent="माइक की अनुमति नहीं मिली। Chrome में माइक Allow करें।";}
+    };
+    rec.onend=function(){if(want)setTimeout(function(){try{rec.start();}catch(x){}},300);};
+    try{rec.start();}catch(x){}
+    setMic(true);
+  }
+  function stopRec(){want=false;if(rec){try{rec.abort();}catch(x){}}setMic(false);}
+  function handle(t){
+    heard.textContent="आपने कहा: "+t;
+    if(R.shutdown.test(t)){mode="stopped";stopRec();setState("off");speechSynthesis&&speechSynthesis.cancel();heard.textContent="Full Shutdown: माइक बंद। दोबारा शुरू करने के लिए बटन दबाएँ।";return;}
+    if(mode==="wait"){
+      if(R.wake.test(t)){mode="active";say("जी, बताइए");}
+      return;
+    }
+    if(mode==="sleep"){
+      if(R.resume.test(t)){mode="active";say("मैं फिर से सुन रहा हूँ");}
+      return;
+    }
+    // active mode
+    if(R.stop.test(t)){mode="stopped";say("ठीक है, माइक बंद कर रहा हूँ",function(){stopRec();setState("off");});return;}
+    if(R.sleep.test(t)){mode="sleep";say("ठीक है, मैं सो रहा हूँ",function(){setState("sleep");});return;}
+    if(R.time.test(t)){var d=new Date();say("अभी समय "+d.getHours()+" बजकर "+d.getMinutes()+" मिनट हुआ है");return;}
+    if(R.date.test(t)){say("आज की तारीख "+new Date().toLocaleDateString("hi-IN",{day:"numeric",month:"long",year:"numeric",weekday:"long"}));return;}
+    askAI(t);
+  }
+  // ===== स्टेप 3: AI दिमाग (Claude) =====
+  var INSTR="तुम JARVIS हो, एक दोस्ताना हिंदी वॉइस असिस्टेंट। सरल हिंदी में जवाब दो, ज़्यादा से ज़्यादा 3 छोटे वाक्य। कोई markdown, तारे, सूची या इमोजी नहीं, क्योंकि जवाब बोलकर सुनाया जाएगा। अगर ताज़ा खबर, इंटरनेट या फोन के काम की बात हो तो साफ़ कहो कि यह अभी नहीं कर सकते। अगर पक्का पता न हो तो अंदाज़ा मत लगाओ, कहो कि पक्का नहीं पता।";
+  var hist=[],sample=null,busy=false;
+  if(window.claude&&claude.use){claude.use("sample").then(function(x){sample=x;});}
+  function clean(x){return x.replace(/[*#_`>~]/g,"").replace(/\s+/g," ").trim();}
+  function askAI(t){
+    if(!sample){say("AI अभी जुड़ा नहीं है। यह पेज claude.ai में खोलिए।");return;}
+    if(busy)return;busy=true;setState("think");
+    var msgs=hist.concat([{role:"user",content:(hist.length?"":INSTR+"\n\nयूज़र का सवाल: ")+t}]);
+    sample(msgs,{cache:false,modelTier:"quick"}).then(function(r){
+      var a=clean(r.text||"");if(!a)a="मुझे जवाब नहीं मिला।";
+      hist.push(msgs[msgs.length-1]);hist.push({role:"assistant",content:a});
+      if(hist.length>12)hist=hist.slice(-12);
+      busy=false;say(a);
+    }).catch(function(e){
+      busy=false;
+      say(e&&e.code==="not_granted"?"AI की अनुमति नहीं मिली। अनुमति दीजिए।":(e&&e.code==="rate_limited"?"अभी बहुत सवाल हो गए, थोड़ा रुककर पूछिए।":"AI से जवाब नहीं आया। दोबारा पूछिए।"));
+    });
+  }
+  micBtn.addEventListener("click",function(){
+    if(want){mode="stopped";stopRec();setState("off");heard.textContent="";}
+    else{mode="wait";setState("sleep");if(sample&&!window.__ping){window.__ping=1;sample("सिर्फ एक शब्द लिखो: ठीक",{cache:false,modelTier:"quick"}).catch(function(){});}startRec();heard.textContent="\"Hi Jarvis\" बोलिए";}
+  });
+  document.getElementById("vtest").addEventListener("click",function(){
+    if(!window.speechSynthesis){heard.textContent="इस ब्राउज़र में बोलने की सुविधा नहीं है।";return;}
+    var n=(speechSynthesis.getVoices()||[]).length;
+    var v=pickVoice();
+    heard.textContent="आवाज़ें मिलीं: "+n+(v?" | चुनी: "+v.lang:"");
+    say("नमस्ते, मैं जार्विस हूँ। क्या आपको मेरी आवाज़ आ रही है?");
+  });
+  setMic(false);setState("off");
+  frame();
+})();
+</script>
+</body>
+</html>
