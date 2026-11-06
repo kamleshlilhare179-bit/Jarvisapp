@@ -100,7 +100,14 @@ public class MainActivity extends Activity {
             public void onEndOfSpeech() { status.setText("समझ रहा हूँ…"); }
             public void onPartialResults(Bundle p) {}
             public void onEvent(int t, Bundle p) {}
-            public void onError(int e) { status.setText("सुनाई नहीं दिया। फिर दबाइए। (कोड " + e + ")"); }
+            public void onError(int e) {
+                String m = e == 9 ? "माइक की अनुमति नहीं है। Settings → Apps → JARVIS → Permissions में माइक Allow करें।"
+                    : (e == 1 || e == 2 || e == 4) ? "इंटरनेट की समस्या है। नेट चालू करके फिर दबाइए।"
+                    : (e == 6 || e == 7) ? "कुछ सुनाई नहीं दिया। फिर दबाकर साफ़ बोलिए।"
+                    : (e == 12 || e == 13) ? "इस फ़ोन में हिन्दी आवाज़ पहचान उपलब्ध नहीं है।"
+                    : "आवाज़ सेवा में समस्या है। Play Store में Google ऐप अपडेट करें।";
+                status.setText(m + " (कोड " + e + ")");
+            }
             public void onResults(Bundle r) {
                 ArrayList<String> l = r.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (l != null && !l.isEmpty()) handle(l.get(0));
@@ -109,7 +116,6 @@ public class MainActivity extends Activity {
         Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN");
-        i.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
         sr.startListening(i);
     }
 
