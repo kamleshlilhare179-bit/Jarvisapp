@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#02040a">
-<title>EDDY — लोगो और ऑर्ब</title>
+<title>JARVIS — लोगो और ऑर्ब</title>
 <style>
 :root{--b:#58b6ff;--p:#8a4dff}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
-body{background:radial-gradient(ellipse at 50% 45%,#0b0f24 0,#02040a 65%);color:#cfe2ff;font-family:system-ui,'Noto Sans Devanagari',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:100dvh;overflow:hidden;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px)}
+body{background:radial-gradient(ellipse at 50% 45%,#0b0f24 0,#02040a 65%);color:#cfe2ff;font-family:system-ui,'Noto Sans Devanagari',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:100vh;height:100dvh;overflow:hidden;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px)}
 #logo{width:104px;height:104px;filter:drop-shadow(0 0 14px rgba(88,182,255,.45))}
 #label{font-size:1.05rem;letter-spacing:.04em;color:#9db8e8;min-height:1.5em}
 #orb{display:block}
@@ -41,7 +41,7 @@ body[data-s=off] #logo{filter:none}
 </style>
 </head>
 <body data-s="sleep">
-<svg id="logo" viewBox="0 0 200 200" role="img" aria-label="EDDY रोबोट लोगो">
+<svg id="logo" viewBox="0 0 200 200" role="img" aria-label="JARVIS रोबोट लोगो">
   <defs>
     <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#f1f4f8"/><stop offset=".45" stop-color="#8c97a6"/><stop offset="1" stop-color="#1a1f27"/>
@@ -59,7 +59,7 @@ body[data-s=off] #logo{filter:none}
     <rect x="48" y="78" width="38" height="22" rx="11"/>
     <rect x="114" y="78" width="38" height="22" rx="11"/>
   </g>
-  <text x="100" y="132" text-anchor="middle" font-family="system-ui,sans-serif" font-size="20" font-weight="700" letter-spacing="6" fill="#9db8e8">EDDY</text>
+  <text x="100" y="132" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" font-weight="700" letter-spacing="4" fill="#9db8e8">JARVIS</text>
   <g id="bars" fill="#8a4dff">
     <rect x="78" y="146" width="6" height="12" rx="3"/><rect x="89" y="146" width="6" height="12" rx="3"/>
     <rect x="100" y="146" width="6" height="12" rx="3"/><rect x="111" y="146" width="6" height="12" rx="3"/>
@@ -144,6 +144,13 @@ function frame(ms) {
   }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   requestAnimationFrame(frame);
+}
+function setLabel(x) { document.getElementById('label').textContent = x; }
+document.getElementById('orb').addEventListener('click', () => { if (window.Android) Android.tap(); });
+if (location.search.indexOf('app=1') > -1) {
+  document.getElementById('btns').style.display = 'none';
+  document.body.style.justifyContent = 'space-evenly';
+  L.sleep = 'गोले को दबाइए'; setState('sleep');
 }
 requestAnimationFrame(frame);
 </script>
