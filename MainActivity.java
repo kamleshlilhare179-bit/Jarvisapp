@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
     TextView status, log;
 
     static final String[][] ALIAS = {
-        {"यूट्यूब", "youtube"}, {"व्हाट्सएप", "whatsapp"}, {"वाट्सएप", "whatsapp"},
+        {"यूट्यूब", "youtube"}, {"युटुब", "youtube"}, {"युट्यूब", "youtube"}, {"यू ट्यूब", "youtube"}, {"व्हाट्स", "whatsapp"}, {"वाट्स", "whatsapp"}, {"वॉट्स", "whatsapp"}, {"व्हॉट्स", "whatsapp"}, {"व्हाट्सएप", "whatsapp"}, {"वाट्सएप", "whatsapp"},
         {"कैमरा", "camera"}, {"गैलरी", "gallery"}, {"क्रोम", "chrome"}, {"सेटिंग", "settings"},
         {"मैप", "maps"}, {"फोटो", "photos"}, {"जीमेल", "gmail"}, {"इंस्टाग्राम", "instagram"},
         {"फेसबुक", "facebook"}, {"कैलकुलेटर", "calculator"}, {"घड़ी", "clock"}, {"गूगल", "google"}
@@ -140,8 +140,8 @@ public class MainActivity extends Activity {
 
     String reply(String t) {
         try {
-            if (has(t, "टॉर्च", "torch", "फ्लैश", "flash")) {
-                boolean on = !has(t, "बंद", "off");
+            if (has(t, "टॉर्च", "टार्च", "टोर्च", "torch", "फ्लैश", "flash", "लाइट")) {
+                boolean on = !has(t, "बंद", "off", "बुझा");
                 CameraManager cm = (CameraManager) getSystemService(CAMERA_SERVICE);
                 cm.setTorchMode(cm.getCameraIdList()[0], on);
                 return on ? "टॉर्च चालू।" : "टॉर्च बंद।";
@@ -180,9 +180,9 @@ public class MainActivity extends Activity {
                 startActivity(s);
                 return q + " खोज रहा हूँ।";
             }
-            if (has(t, "खोलो", "खोल दो", "open", "चलाओ")) {
+            if (has(t, "खोल", "ओपन", "open", "चलाओ", "चलाइए", "चलाएं", "चालू करो", "चालू करिए")) {
                 String n = t;
-                for (String w : new String[]{"जार्विस", "ऐप", "एप", "app", "खोल दो", "खोलो", "खोल", "चलाओ", "open"}) n = n.replace(w, "");
+                for (String w : new String[]{"जार्विस", " ऐप", " एप", " app", "खोलिए", "खोलें", "खोल दो", "खोलो", "खोल", "चलाइए", "चलाएं", "चलाओ", "चालू करो", "चालू करिए", "ओपन", "open", "करो", "करिए"}) n = n.replace(w, "");
                 n = n.trim();
                 for (String[] a : ALIAS) if (n.contains(a[0])) n = a[1];
                 if (n.isEmpty()) return "कौन सा ऐप खोलूँ?";
