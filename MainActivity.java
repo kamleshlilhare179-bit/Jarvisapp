@@ -209,7 +209,7 @@ public class MainActivity extends Activity {
                 return "नमस्कार सर। बताइए, मैं क्या करूँ?";
             if (has(t, "धन्यवाद", "शुक्रिया", "थैंक")) return "आपका स्वागत है सर।";
         } catch (Exception e) {
-            return "माफ़ कीजिए, यह काम नहीं हो पाया।";
+            return "माफ़ कीजिए, यह काम नहीं हो पाया। (" + e.getClass().getSimpleName() + ")";
         }
         return "माफ़ कीजिए, यह मुझे समझ नहीं आया।";
     }
