@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#02040a">
+<title>EDDY — लोगो और ऑर्ब</title>
+<style>
+:root{--b:#58b6ff;--p:#8a4dff}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:radial-gradient(ellipse at 50% 45%,#0b0f24 0,#02040a 65%);color:#cfe2ff;font-family:system-ui,'Noto Sans Devanagari',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:100dvh;overflow:hidden;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px)}
+#logo{width:104px;height:104px;filter:drop-shadow(0 0 14px rgba(88,182,255,.45))}
+#label{font-size:1.05rem;letter-spacing:.04em;color:#9db8e8;min-height:1.5em}
+#orb{display:block}
+.btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:420px}
+.btns button{background:rgba(88,182,255,.08);border:1px solid rgba(138,77,255,.6);color:#dbe8ff;padding:12px 4px;font:inherit;font-size:1rem;border-radius:12px}
+.btns button[aria-pressed=true]{background:linear-gradient(135deg,#3d7bff,#8a4dff);border-color:#fff;color:#fff}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* आँखों का एनिमेशन */
+#eyes{transform-origin:100px 89px;transition:transform .5s,opacity .5s}
+#bars{opacity:0;transition:opacity .3s}
+#bars rect{transform-box:fill-box;transform-origin:center}
+body[data-s=listening] #eyes{animation:wide 1.2s ease-in-out infinite}
+body[data-s=thinking] #eyes{animation:look 1.5s ease-in-out infinite}
+body[data-s=speaking] #eyes{animation:flick .4s ease-in-out infinite}
+body[data-s=speaking] #bars{opacity:1}
+body[data-s=speaking] #bars rect{animation:bar .45s ease-in-out infinite alternate}
+body[data-s=speaking] #bars rect:nth-child(2){animation-delay:.1s}
+body[data-s=speaking] #bars rect:nth-child(3){animation-delay:.2s}
+body[data-s=speaking] #bars rect:nth-child(4){animation-delay:.05s}
+body[data-s=speaking] #bars rect:nth-child(5){animation-delay:.15s}
+body[data-s=sleep] #eyes{transform:scaleY(.12);opacity:.45}
+body[data-s=off] #eyes{opacity:.07}
+body[data-s=off] #logo{filter:none}
+@keyframes wide{50%{transform:scaleY(1.28)}}
+@keyframes look{0%,100%{transform:translateX(-9px)}50%{transform:translateX(9px)}}
+@keyframes flick{50%{opacity:.65}}
+@keyframes bar{from{transform:scaleY(.4)}to{transform:scaleY(1.5)}}
+@media (prefers-reduced-motion:reduce){#eyes,#bars rect{animation:none!important}}
+</style>
+</head>
+<body data-s="sleep">
+<svg id="logo" viewBox="0 0 200 200" role="img" aria-label="EDDY रोबोट लोगो">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f1f4f8"/><stop offset=".45" stop-color="#8c97a6"/><stop offset="1" stop-color="#1a1f27"/>
+    </linearGradient>
+    <radialGradient id="plate" cx=".5" cy=".4" r=".7">
+      <stop offset="0" stop-color="#101626"/><stop offset="1" stop-color="#03050a"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-80%" width="200%" height="260%">
+      <feGaussianBlur stdDeviation="4" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="100" cy="100" r="97" fill="url(#metal)" stroke="#c9d2de" stroke-width="2"/>
+  <circle cx="100" cy="100" r="80" fill="url(#plate)" stroke="#2a3550" stroke-width="2"/>
+  <g id="eyes" filter="url(#glow)" fill="#58b6ff">
+    <rect x="48" y="78" width="38" height="22" rx="11"/>
+    <rect x="114" y="78" width="38" height="22" rx="11"/>
+  </g>
+  <text x="100" y="132" text-anchor="middle" font-family="system-ui,sans-serif" font-size="20" font-weight="700" letter-spacing="6" fill="#9db8e8">EDDY</text>
+  <g id="bars" fill="#8a4dff">
+    <rect x="78" y="146" width="6" height="12" rx="3"/><rect x="89" y="146" width="6" height="12" rx="3"/>
+    <rect x="100" y="146" width="6" height="12" rx="3"/><rect x="111" y="146" width="6" height="12" rx="3"/>
+    <rect x="122" y="146" width="6" height="12" rx="3"/>
+  </g>
+</svg>
+<div id="label">नींद मोड</div>
+<canvas id="orb" aria-hidden="true"></canvas>
+<div class="btns" id="btns">
+  <button data-s="listening" aria-pressed="false">सुनना</button>
+  <button data-s="thinking" aria-pressed="false">सोचना</button>
+  <button data-s="speaking" aria-pressed="false">बोलना</button>
+  <button data-s="sleep" aria-pressed="true">नींद</button>
+  <button data-s="off" aria-pressed="false">पूरा बंद</button>
+</div>
+<script>
+const L = { listening: 'सुन रहा हूँ…', thinking: 'सोच रहा हूँ…', speaking: 'बोल रहा हूँ…', sleep: 'नींद मोड — धीमा', off: 'पूरा बंद — माइक बंद' };
+const P = { listening: { a: .55, s: 1.5, al: 1 }, thinking: { a: .3, s: 2.8, al: 1 }, speaking: { a: .7, s: 2, al: 1 }, sleep: { a: .12, s: .35, al: .38 }, off: { a: 0, s: 0, al: 0 } };
+let S = 'sleep', t = 0, last = 0, cur = { a: .12, s: .35, al: .38 };
+const cv = document.getElementById('orb'), ctx = cv.getContext('2d');
+
+function size() {
+  const r = Math.min(innerWidth * .82, innerHeight * .42, 380), d = Math.min(devicePixelRatio || 1, 2);
+  cv.style.width = cv.style.height = r + 'px';
+  cv.width = cv.height = Math.round(r * d);
+}
+addEventListener('resize', size); size();
+
+function setState(s) {
+  S = s;
+  document.body.dataset.s = s;
+  document.getElementById('label').textContent = L[s];
+  document.querySelectorAll('#btns button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === s));
+}
+document.getElementById('btns').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) setState(b.dataset.s);
+});
+
+function frame(ms) {
+  const dt = Math.min((ms - last) / 1000, .05); last = ms;
+  const p = P[S];
+  for (const k in p) cur[k] += (p[k] - cur[k]) * .06;
+  t += dt * cur.s;
+  const W = cv.width, c = W / 2, R = W * .25, d = W / 300;
+  ctx.clearRect(0, 0, W, W);
+  if (cur.al < .02) {
+    ctx.fillStyle = 'rgba(88,182,255,.25)';
+    ctx.beginPath(); ctx.arc(c, c, 4 * d, 0, 7); ctx.fill();
+    return requestAnimationFrame(frame);
+  }
+  let lvl = cur.a;
+  if (S === 'speaking') lvl *= .5 + .5 * Math.abs(Math.sin(ms / 110) * Math.sin(ms / 170 + 1));
+  const sh = S === 'thinking' ? Math.sin(t * .8) * 35 : 0;
+  const hues = [222 + sh, 268 - sh, 205 + sh];
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = cur.al;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    for (let j = 0; j <= 120; j++) {
+      const a = j / 120 * Math.PI * 2;
+      const r = R * (1 + lvl * .35 * Math.sin(a * (3 + i) + t * (1 + i * .4) + i) + lvl * .15 * Math.sin(a * (5 + i * 2) - t * 1.3));
+      const x = c + Math.cos(a + t * .15 * (i + 1)) * r, y = c + Math.sin(a + t * .15 * (i + 1)) * r;
+      j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    const g = ctx.createRadialGradient(c, c, R * .1, c, c, R * 1.5);
+    g.addColorStop(0, 'hsla(' + hues[i] + ',100%,65%,.9)');
+    g.addColorStop(1, 'hsla(' + hues[i] + ',100%,50%,0)');
+    ctx.fillStyle = g; ctx.fill();
+  }
+  const core = ctx.createRadialGradient(c, c, 0, c, c, R * .75);
+  core.addColorStop(0, 'rgba(255,255,255,.95)'); core.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(c, c, R * .75, 0, 7); ctx.fill();
+  if (S === 'listening') {
+    ctx.globalCompositeOperation = 'source-over';
+    for (let k = 0; k < 3; k++) {
+      const ph = (t * .35 + k / 3) % 1;
+      ctx.globalAlpha = (1 - ph) * .55;
+      ctx.strokeStyle = '#58b6ff'; ctx.lineWidth = 2 * d;
+      ctx.beginPath(); ctx.arc(c, c, R * (1.15 + ph * 1.1), 0, 7); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
