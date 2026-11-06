@@ -162,16 +162,17 @@ public class MainActivity extends Activity {
                 return "नंबर बोलिए, जैसे, कॉल करो 9876543210।";
             }
             if (has(t, "अलार्म", "alarm")) {
-                String dg = t.replaceAll("[^0-9]", "");
-                if (dg.isEmpty() || dg.length() > 2) return "कितने बजे? जैसे, सुबह 6 बजे का अलार्म लगाओ।";
-                int h = Integer.parseInt(dg);
+                java.util.regex.Matcher mm = java.util.regex.Pattern.compile("(\\d{1,2})(?:[:.](\\d{2}))?").matcher(t);
+                if (!mm.find()) return "कितने बजे? जैसे, सुबह 6 बजे का अलार्म लगाओ।";
+                int h = Integer.parseInt(mm.group(1));
+                int mi = mm.group(2) != null ? Integer.parseInt(mm.group(2)) : 0;
                 if (h < 12 && has(t, "शाम", "रात", "दोपहर")) h += 12;
-                if (h > 23) return "समय समझ नहीं आया।";
+                if (h > 23 || mi > 59) return "समय समझ नहीं आया।";
                 Intent a = new Intent(AlarmClock.ACTION_SET_ALARM);
                 a.putExtra(AlarmClock.EXTRA_HOUR, h);
-                a.putExtra(AlarmClock.EXTRA_MINUTES, 0);
+                a.putExtra(AlarmClock.EXTRA_MINUTES, mi);
                 startActivity(a);
-                return h + " बजे का अलार्म लगा रहा हूँ।";
+                return h + " बजकर " + mi + " मिनट का अलार्म लगा रहा हूँ।";
             }
             if (has(t, "खोजो", "सर्च", "search")) {
                 String q = t.replace("गूगल पर", "").replace("खोजो", "").replace("सर्च करो", "").replace("सर्च", "").replace("search", "").trim();
